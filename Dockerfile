@@ -22,4 +22,4 @@ COPY . /app
 ### NOT REQUIRED, UNLESS WANT TO SPECIFY PORT
 EXPOSE 8080
 ### START SERVER
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port","8080"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port","8080"]
