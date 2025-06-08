@@ -4,12 +4,21 @@ import requests
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Header
 
+from fastapi import UploadFile, File, Form
+from typing import List
+import shutil
+import tempfile
+from llama_cloud_services import LlamaParse
+
+
 app = FastAPI()
 
+# HOME
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
+# OPENAI - NEED TO BUILD FULL BODY
 @app.post("/openai")
 async def openai(apikey: str, body: dict):
     # INIT HEADER
@@ -19,6 +28,7 @@ async def openai(apikey: str, body: dict):
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=body)
     return response.json()
 
+# OPENAI - SINGLE QUESTION
 @app.post("/openai_single")
 async def openai_single(apikey: str, question: str):
     # INIT HEADER
@@ -33,7 +43,37 @@ async def openai_single(apikey: str, question: str):
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=body)
     return response.json()
 
+# LLAMA
 
+
+@app.post("/llama_parse_batch")
+async def llama_parse_batch(apikey: str = Form(...), files: List[UploadFile] = File(...)):
+    temp_file_paths = []
+    try:
+        # Save uploaded files temporarily
+        for file in files:
+            suffix = os.path.splitext(file.filename)[-1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                shutil.copyfileobj(file.file, tmp)
+                temp_file_paths.append(tmp.name)
+        # Call LlamaParse
+        parser = LlamaParse(
+            api_key=apikey,
+            num_workers=4,
+            verbose=True,
+            language="en"
+        )
+        results = parser.parse(temp_file_paths)
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup temp files safely
+        for path in temp_file_paths:
+            try:
+                os.remove(path)
+            except Exception as e:
+                print(f"Failed to delete temp file {path}: {e}")
 
 # @app.post("/deepseek")
 # async def deepseek(apikey: str, body: dict):
