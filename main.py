@@ -2,9 +2,8 @@ import os
 import uvicorn
 import requests
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Form
 
-from fastapi import UploadFile, File, Form
 from typing import List
 import shutil
 import tempfile
@@ -43,9 +42,23 @@ async def openai_single(apikey: str, question: str):
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=body)
     return response.json()
 
-# LLAMA
+# OPENAI - SEARCH SINGLE
+@app.post("/openai_search_single")
+async def openai_search_single(apikey: str, question: str, search_context_size: str = 'low'):
+    # INIT HEADER
+    headers = {"Content-Type": "application/json",
+               "Authorization": f"Bearer {apikey}"}
+    # BUILD BODY
+    body = {"model": "gpt-4o-search-preview",
+            'web_search_options': {'search_context_size': search_context_size},
+            "messages": [{'role': 'user', 
+                          'content': question}],
+            }
+    # CALL API
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=body)
+    return response.json()
 
-
+# LLAMA PARSE
 @app.post("/llama_parse_batch")
 async def llama_parse_batch(apikey: str = Form(...), files: List[UploadFile] = File(...)):
     temp_file_paths = []
